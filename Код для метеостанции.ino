@@ -66,7 +66,7 @@ void loop() {
   if (millis() > Bot_lasttime + Bot_mtbs)  {
     bot.getUpdates(bot.message[0][1]);   // Включаем API и получаем новые сообщения    
     if (getTemperature() < 23){
-    Serial.print("ALARM: "); // Проверяем,если температура ниже указанной, тогда шлем сообщение
+    Serial.print("ALARM: "); //Выводим покаатели с датчиков
     bot.sendMessage("216473175", (String)"Температура: "+bme.readTemperature()+", "");
     bot.sendMessage("216473175", (String)"Влажность: "+bme.readPressure() / 100.0F+", "");
     bot.sendMessage("216473175", (String)"Давление(%): "+bme.readHumidity()+", "");
