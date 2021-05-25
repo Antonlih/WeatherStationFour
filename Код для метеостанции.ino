@@ -63,7 +63,7 @@ void handleNewMessages(int numNewMessages) {
       welcome += "/humidityOutsideHouse : Узнать влажность снаружи дома в процентах(%)\n";
       welcome += "/atmospherePressure : Узнать атмосферное давление в мм.рт.ст\n";
       welcome += "/options : returns a custom reply keyboard\n";
-      welcome += "/help : displays this message again\n";
+      welcome += "/help : Показать это сообщение снова\n";
       bot.sendMessage(chat_id, welcome, "Markdown");
     }
   }
