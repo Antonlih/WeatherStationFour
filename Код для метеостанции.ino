@@ -1,77 +1,102 @@
-#include <Wire.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BME280.h>
-
 #include <ESP8266WiFi.h>
 #include <WiFiClientSecure.h>
-#include <ESP8266TelegramBOT.h>
-#include <OneWire.h>
-#include <DallasTemperature.h>
+#include <UniversalTelegramBot.h>
+#include <ArduinoJson.h>
+
+  const char* ssid = "planeta322927"; // Имя сети wifi
+  const char* password = "F754579t";  // Пароль от сети wifi
+
+// Инициализация Telegram бота
+#define BOTtoken "1834747810:AAFdUWkW_AoqnN39SZubFt_QxxS4qYdY_2Q"  // Токен бота
+
+
+#define chatid "1712997246"                                   // ID чата
+
+long checkTelegramDueTime;
+int checkTelegramDelay = 1000;
+
+long ldrDueTime;
+int checkLDRDelay = 250;
 
 WiFiClientSecure client;
-// Initialize Wifi connection to the router
-char ssid[] = "Redmi";              
-char password[] = "12345678";            
-int status = 0;
+UniversalTelegramBot bot(BOTtoken, client);
 
+void handleNewMessages(int numNewMessages) {
+  for (int i=0; i<numNewMessages; i++) {
+    String chat_id = String(bot.messages[i].chat_id);
+    String text = bot.messages[i].text;
 
-// Initialize Telegram BOT
+    String from_name = bot.messages[i].from_name;
+    if (from_name == "") from_name = "Guest";
 
-#define BOTtoken "1834747810:AAFdUWkW_AoqnN39SZubFt_QxxS4qYdY_2Q"  //Токен бота полученного от @BotFather
-#define BOTname "weather station" // Имя бота
-#define BOTusername "Project_Weather_Station_Beta_bot" // Логин бота
-TelegramBOT bot(BOTtoken, BOTname, BOTusername);
+    if (text == "/temperature") {
+      bot.sendMessage(chatid, "30 gradusov");
+    }
 
-int Bot_mtbs = 1000; //среднее время между сканированием сообщений
-long Bot_lasttime;   
+    if (text == "/vlajnost") {
+      bot.sendMessage(chatid, "80%");
+    }
 
-bool Start = false;
+    if (text == "/davlenie") {
+      bot.sendMessage(chatid, "776 mm");
+    }
 
-void Bot_Messages() {
-  for (int i = 1; i < bot.message[0][0].toInt() + 1; i++)      {
-    bot.sendMessage(bot.message[i][4], bot.message[i][5], "");
-    bot.message[i][5]=bot.message[i][5].substring(1,bot.message[i][5].length());
-       
-    if (bot.message[i][5] == "start") {
-      String wellcome = "Привет. Я домашняя метеостанция";
-      bot.sendMessage(bot.message[i][4], wellcome, "");
-      Start = true;
+    if (text == "/options") {
+      String keyboardJson = "[[\"/temperature\", \"/vlajnost\", \"/davlenie\"]]";
+      bot.sendMessageWithReplyKeyboard(chat_id, "Что вы хотите узнать?", "", keyboardJson, true);
+    }
+
+    if (text == "/start" || text == "/help") {
+      String welcome = "Привет, я домашняя метеостанция. Рада знакомству, " + from_name + ".\n";
+      welcome += "Доступные функции:\n\n";
+      welcome += "/temperature : Узнать температуру в градусах цельсия\n";
+      welcome += "/vlalnost : Узнать влажность в процентах\n";
+      welcome += "/davlenie : Узнать давление в мм.рт.ст\n";
+      welcome += "/options : returns a custom reply keyboard\n";
+      welcome += "/help : displays this message again\n";
+      bot.sendMessage(chat_id, welcome, "Markdown");
     }
   }
-  bot.message[0][0] = "";   // All messages have been replied - reset new messages
 }
 
+
 void setup() {
+  Serial.begin(115200);
+  client.setInsecure();
+
   
-  // attempt to connect to Wifi network:
-  Serial.print("Connecting Wifi: ");
+  // Attempt to connect to Wifi network:
+  Serial.print("Соединение с Wifi: ");
   Serial.println(ssid);
-  while (WiFi.begin(ssid, password) != WL_CONNECTED) {
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
     Serial.print(".");
     delay(500);
   }
+
   Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  IPAddress ip = WiFi.localIP();
- 
-  Serial.println(ip);
-  client.setInsecure();
-  bot.begin();      // Включаем бота
+  Serial.println("WiFi соединение установлено");
+  Serial.print("IP адрес: ");
+  Serial.println(WiFi.localIP());
+
+  bot.sendMessage(chatid, "Бот стартовал", "");
 }
 
-
-
-void loop() { 
-  if (millis() > Bot_lasttime + Bot_mtbs)  {
-    bot.getUpdates(bot.message[0][1]);   // Включаем API и получаем новые сообщения    
-    if (getTemperature() < 23){
-    Serial.print("ALARM: "); //Выводим покаатели с датчиков
-    bot.sendMessage("216473175", (String)"Температура: "+bme.readTemperature()+", "");
-    bot.sendMessage("216473175", (String)"Влажность: "+bme.readPressure() / 100.0F+", "");
-    bot.sendMessage("216473175", (String)"Давление(%): "+bme.readHumidity()+", "");
-  }    
-    Bot_Messages();
-    Bot_lasttime = millis();
+void loop() {
+    
+    long now = millis();
+  if(now >= checkTelegramDueTime) {
+    Serial.println("---- Checking Telegram -----");
+    int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+    while(numNewMessages) {
+      Serial.println("Bot recieved a message");
+      handleNewMessages(numNewMessages);
+      numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+    }
+    checkTelegramDueTime = now + checkTelegramDelay;
   }
+  now = millis();
 }
