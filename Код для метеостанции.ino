@@ -29,29 +29,39 @@ void handleNewMessages(int numNewMessages) {
     String from_name = bot.messages[i].from_name;
     if (from_name == "") from_name = "Guest";
 
-    if (text == "/temperature") {
+    if (text == "/temperatureInsideHouse") {
       bot.sendMessage(chatid, "30 gradusov");
     }
 
-    if (text == "/vlajnost") {
+    if (text == "/temperatureOutsideHouse") {
+      bot.sendMessage(chatid, "35 gradusov");
+    }
+    
+    if (text == "/humidityInsideHouse") {
       bot.sendMessage(chatid, "80%");
     }
 
-    if (text == "/davlenie") {
+    if (text == "/humidityOutsideHouse") {
+      bot.sendMessage(chatid, "60%");
+    }
+
+    if (text == "/atmospherePressure") {
       bot.sendMessage(chatid, "776 mm");
     }
 
     if (text == "/options") {
-      String keyboardJson = "[[\"/temperature\", \"/vlajnost\", \"/davlenie\"]]";
+      String keyboardJson = "[[\"/temperatureInsideHouse\", \"/temperatureOutsideHouse\", \"/humidityInsideHouse\", \"/humidityOutsideHouse\", \"/atmospherePressure\"]]";
       bot.sendMessageWithReplyKeyboard(chat_id, "Что вы хотите узнать?", "", keyboardJson, true);
     }
 
     if (text == "/start" || text == "/help") {
       String welcome = "Привет, я домашняя метеостанция. Рада знакомству, " + from_name + ".\n";
       welcome += "Доступные функции:\n\n";
-      welcome += "/temperature : Узнать температуру в градусах цельсия\n";
-      welcome += "/vlalnost : Узнать влажность в процентах\n";
-      welcome += "/davlenie : Узнать давление в мм.рт.ст\n";
+      welcome += "/temperatureInsideHouse : Узнать температуру внутри дома в градусах цельсия\n";
+      welcome += "/temperatureOutsideHouse : Узнать температуру снаружи дома в градусах цельсия\n";
+      welcome += "/humidityInsideHouse : Узнать влажность внутри дома в процентах(%)\n";
+      welcome += "/humidityOutsideHouse : Узнать влажность снаружи дома в процентах(%)\n";
+      welcome += "/atmospherePressure : Узнать атмосферное давление в мм.рт.ст\n";
       welcome += "/options : returns a custom reply keyboard\n";
       welcome += "/help : displays this message again\n";
       bot.sendMessage(chat_id, welcome, "Markdown");
@@ -65,7 +75,7 @@ void setup() {
   client.setInsecure();
 
   
-  // Attempt to connect to Wifi network:
+  // Попытка подключения к сети
   Serial.print("Соединение с Wifi: ");
   Serial.println(ssid);
 
