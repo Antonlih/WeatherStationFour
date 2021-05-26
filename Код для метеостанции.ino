@@ -3,8 +3,8 @@
 #include <UniversalTelegramBot.h>
 #include <ArduinoJson.h>
 
-  const char* ssid = "planeta322927"; // Имя сети wifi
-  const char* password = "F754579t";  // Пароль от сети wifi
+  const char* ssid = "VISH1"; // Имя сети wifi
+  const char* password = "1q2w3e4r5t";  // Пароль от сети wifi
 
 // Инициализация Telegram бота
 #define BOTtoken "1834747810:AAFdUWkW_AoqnN39SZubFt_QxxS4qYdY_2Q"  // Токен бота
@@ -12,8 +12,11 @@
 
 #define chatid "1712997246"                                   // ID чата
 
+long timeNotify;
+
 long checkTelegramDueTime;
 int checkTelegramDelay = 1000;
+int timeLast = 0;
 
 long ldrDueTime;
 int checkLDRDelay = 250;
@@ -109,4 +112,14 @@ void loop() {
     checkTelegramDueTime = now + checkTelegramDelay;
   }
   now = millis();
-}
+
+  timeNotify =  millis();
+  if (timeNotify - timeLast >= 300000)   //Отправка сообщения каждые 5 минут
+  {
+    bot.sendMessage(chatid," +timeNotify+ ");
+      timeLast = timeNotify;
+  }
+  
+
+  
+  }
