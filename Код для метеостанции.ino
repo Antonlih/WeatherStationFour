@@ -34,6 +34,10 @@ WiFiClientSecure client;
 UniversalTelegramBot bot(BOTtoken, client);
 
 void handleNewMessages(int numNewMessages) {
+
+  char status;
+  double T,P; 
+ 
   for (int i=0; i<numNewMessages; i++) {
     String chat_id = String(bot.messages[i].chat_id);
     String text = bot.messages[i].text;
@@ -46,7 +50,17 @@ void handleNewMessages(int numNewMessages) {
     }
 
     if (text == "/temperatureOutsideHouse") {
-      bot.sendMessage(chatid, (String)"Температура снаружи: "+getTemperature());
+
+      status = pressure.startTemperature();
+      if (status != 0)
+      {
+      delay(status);
+      status = pressure.getTemperature(T);
+      if (status != 0)
+      { 
+       bot.sendMessage(chatid, (String)"Температура снаружи: " + T + " C");
+      }
+      }
     }
     
     if (text == "/humidityInsideHouse") {
@@ -54,8 +68,26 @@ void handleNewMessages(int numNewMessages) {
     }
 
     if (text == "/atmospherePressure") {
-      bot.sendMessage(chatid, (String)"Атмосферное давление: "+getPressure());
-    }
+
+      status = pressure.startTemperature();
+      if (status != 0)
+      {
+      delay(status);
+      status = pressure.getTemperature(T);
+      }
+
+      status = pressure.startPressure(3);
+      if (status != 0)
+      {
+      delay(status);
+      status = pressure.getPressure(P,T);
+      if (status != 0)
+      {
+       P = P*0.750064;
+      bot.sendMessage(chatid, (String)"Атмосферное давление: " + P + " мм.рт.ст");
+      }
+      }
+      }
 
     if (text == "/options") {
       String keyboardJson = "[[\"/temperatureInsideHouse\", \"/temperatureOutsideHouse\", \"/humidityInsideHouse\", \"/atmospherePressure\"]]";
@@ -130,40 +162,3 @@ void loop() {
    
 }
 
-double getPressure(){
-    char status;
-    double T,P,p0,a;
-
-    status = pressure.startTemperature();
-    if (status != 0){
-        // ожидание замера температуры
-        delay(status);
-        status = pressure.getTemperature(T);
-        if (status != 0){
-            status = pressure.startPressure(3);
-            if (status != 0){
-                // ожидание замера давления
-                delay(status);
-                status = pressure.getPressure(P,T);
-                if (status != 0){
-                    return(P);
-                }
-            }
-        }
-    }
-}
-
-double getTemperature(){
-    char status;
-    double T,P,p0,a;
-
-    status = pressure.startTemperature();
-    if (status != 0){
-        // ожидание замера температуры
-        delay(status);
-        status = pressure.getTemperature(T);
-        if (status != 0){
-          return(T);
-        }
-    }
-}
