@@ -8,9 +8,9 @@
 
 SFE_BMP180 pressure;
 
-#include <dht11.h>       // Добавляем библиотеку DHT11
-dht11 DHT;               // Объявление переменной класса dht11
-#define DHT11_PIN 2     // Датчик DHT11 подключен к цифровому пину номер 4
+#include "DHT.h"
+#define DHTPIN 13
+DHT dht(DHTPIN, DHT11); 
 
   const char* ssid = "planeta322927"; // Имя сети wifi
   const char* password = "F754579t";  // Пароль от сети wifi
@@ -46,7 +46,8 @@ void handleNewMessages(int numNewMessages) {
     if (from_name == "") from_name = "Guest";
 
     if (text == "/temperatureInsideHouse") {
-      bot.sendMessage(chatid, (String)"Температура снаружи: "+DHT.temperature);
+      float temperature = dht.readTemperature();
+      bot.sendMessage(chatid, (String)"Температура внутри дома: " + temperature);
     }
 
     if (text == "/temperatureOutsideHouse") {
@@ -58,13 +59,14 @@ void handleNewMessages(int numNewMessages) {
       status = pressure.getTemperature(T);
       if (status != 0)
       { 
-       bot.sendMessage(chatid, (String)"Температура снаружи: " + T + " C");
+       bot.sendMessage(chatid, (String)"Температура снаружи дома: " + T + " C");
       }
       }
     }
     
     if (text == "/humidityInsideHouse") {
-      bot.sendMessage(chatid, (String)"Влажность в доме: "+DHT.humidity);
+      float h = dht.readHumidity();
+      bot.sendMessage(chatid, (String)"Влажность в доме: " + h);
     }
 
     if (text == "/atmospherePressure") {
@@ -100,7 +102,6 @@ void handleNewMessages(int numNewMessages) {
       welcome += "/temperatureInsideHouse : Узнать температуру внутри дома в градусах цельсия\n";
       welcome += "/temperatureOutsideHouse : Узнать температуру снаружи дома в градусах цельсия\n";
       welcome += "/humidityInsideHouse : Узнать влажность внутри дома в процентах(%)\n";
-      welcome += "/humidityOutsideHouse : Узнать влажность снаружи дома в процентах(%)\n";
       welcome += "/atmospherePressure : Узнать атмосферное давление в мм.рт.ст\n";
       welcome += "/options : returns a custom reply keyboard\n";
       welcome += "/help : Показать это сообщение снова\n";
@@ -161,4 +162,3 @@ void loop() {
   }
    
 }
-
