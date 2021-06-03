@@ -3,8 +3,17 @@
 #include <UniversalTelegramBot.h>
 #include <ArduinoJson.h>
 
-  const char* ssid = "VISH1"; // Имя сети wifi
-  const char* password = "1q2w3e4r5t";  // Пароль от сети wifi
+#include <SFE_BMP180.h>
+#include <Wire.h>
+
+SFE_BMP180 pressure;
+
+#include <dht11.h>       // Добавляем библиотеку DHT11
+dht11 DHT;               // Объявление переменной класса dht11
+#define DHT11_PIN 2     // Датчик DHT11 подключен к цифровому пину номер 4
+
+  const char* ssid = "planeta322927"; // Имя сети wifi
+  const char* password = "F754579t";  // Пароль от сети wifi
 
 // Инициализация Telegram бота
 #define BOTtoken "1834747810:AAFdUWkW_AoqnN39SZubFt_QxxS4qYdY_2Q"  // Токен бота
@@ -33,27 +42,23 @@ void handleNewMessages(int numNewMessages) {
     if (from_name == "") from_name = "Guest";
 
     if (text == "/temperatureInsideHouse") {
-      bot.sendMessage(chatid, "30 gradusov");
+      bot.sendMessage(chatid, (String)"Температура снаружи: "+DHT.temperature);
     }
 
     if (text == "/temperatureOutsideHouse") {
-      bot.sendMessage(chatid, "35 gradusov");
+      bot.sendMessage(chatid, (String)"Температура снаружи: "+getTemperature());
     }
     
     if (text == "/humidityInsideHouse") {
-      bot.sendMessage(chatid, "80%");
-    }
-
-    if (text == "/humidityOutsideHouse") {
-      bot.sendMessage(chatid, "60%");
+      bot.sendMessage(chatid, (String)"Влажность в доме: "+DHT.humidity);
     }
 
     if (text == "/atmospherePressure") {
-      bot.sendMessage(chatid, "776 mm");
+      bot.sendMessage(chatid, (String)"Атмосферное давление: "+getPressure());
     }
 
     if (text == "/options") {
-      String keyboardJson = "[[\"/temperatureInsideHouse\", \"/temperatureOutsideHouse\", \"/humidityInsideHouse\", \"/humidityOutsideHouse\", \"/atmospherePressure\"]]";
+      String keyboardJson = "[[\"/temperatureInsideHouse\", \"/temperatureOutsideHouse\", \"/humidityInsideHouse\", \"/atmospherePressure\"]]";
       bot.sendMessageWithReplyKeyboard(chat_id, "Что вы хотите узнать?", "", keyboardJson, true);
     }
 
@@ -75,6 +80,9 @@ void handleNewMessages(int numNewMessages) {
 
 void setup() {
   Serial.begin(115200);
+
+  pressure.begin();
+  
   client.setInsecure();
 
   
@@ -114,12 +122,48 @@ void loop() {
   now = millis();
 
   timeNotify =  millis();
-  if (timeNotify - timeLast >= 300000)   //Отправка сообщения каждые 5 минут
+  if (timeNotify - timeLast >= 300000)   //Проверка показаний с датчиков и, влзможно, отправка сообщения каждые 5 минут
   {
     bot.sendMessage(chatid," +timeNotify+ ");
       timeLast = timeNotify;
   }
-  
+   
+}
 
-  
-  }
+double getPressure(){
+    char status;
+    double T,P,p0,a;
+
+    status = pressure.startTemperature();
+    if (status != 0){
+        // ожидание замера температуры
+        delay(status);
+        status = pressure.getTemperature(T);
+        if (status != 0){
+            status = pressure.startPressure(3);
+            if (status != 0){
+                // ожидание замера давления
+                delay(status);
+                status = pressure.getPressure(P,T);
+                if (status != 0){
+                    return(P);
+                }
+            }
+        }
+    }
+}
+
+double getTemperature(){
+    char status;
+    double T,P,p0,a;
+
+    status = pressure.startTemperature();
+    if (status != 0){
+        // ожидание замера температуры
+        delay(status);
+        status = pressure.getTemperature(T);
+        if (status != 0){
+          return(T);
+        }
+    }
+}
