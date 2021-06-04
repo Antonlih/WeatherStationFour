@@ -23,6 +23,9 @@ DHT dht(DHTPIN, DHT11);
 
 long timeNotify;
 
+  char status;
+  double T,P; 
+  
 long checkTelegramDueTime;
 int checkTelegramDelay = 1000;
 int timeLast = 0;
@@ -30,13 +33,16 @@ int timeLast = 0;
 long ldrDueTime;
 int checkLDRDelay = 250;
 
+double pressure_array[6];
+
+double count;
+double aver;
+
 WiFiClientSecure client;
 UniversalTelegramBot bot(BOTtoken, client);
 
 void handleNewMessages(int numNewMessages) {
 
-  char status;
-  double T,P; 
  
   for (int i=0; i<numNewMessages; i++) {
     String chat_id = String(bot.messages[i].chat_id);
@@ -45,12 +51,12 @@ void handleNewMessages(int numNewMessages) {
     String from_name = bot.messages[i].from_name;
     if (from_name == "") from_name = "Guest";
 
-    if (text == "/temperatureInsideHouse") {
+    if (text == "/temInHouse") {
       float temperature = dht.readTemperature();
-      bot.sendMessage(chatid, (String)"Температура внутри дома: " + temperature);
+      bot.sendMessage(chatid, (String)"Температура внутри дома: " + temperature + " C");
     }
 
-    if (text == "/temperatureOutsideHouse") {
+    if (text == "/temOutHouse") {
 
       status = pressure.startTemperature();
       if (status != 0)
@@ -64,12 +70,36 @@ void handleNewMessages(int numNewMessages) {
       }
     }
     
-    if (text == "/humidityInsideHouse") {
+    if (text == "/humInHouse") {
       float h = dht.readHumidity();
-      bot.sendMessage(chatid, (String)"Влажность в доме: " + h);
+      bot.sendMessage(chatid, (String)"Влажность в доме: " + h + " %");
     }
 
-    if (text == "/atmospherePressure") {
+    if (text == "/wForecast") {
+      aver = count / 5;
+      if(pressure_array[5] - aver  > 2){
+      bot.sendMessage(chatid, (String)"Погода будет хорошей и ясной. Без осадков");
+      }
+
+      if(aver - pressure_array[5]  > 2){
+      bot.sendMessage(chatid, (String)"Ожидается ухудшение погоды");
+      }
+
+      if( pressure_array[0] == pressure_array[1] &&  pressure_array[1] ==  pressure_array[2] &&  pressure_array[2] ==  pressure_array[3]
+      &&  pressure_array[3] ==  pressure_array[4]){
+      bot.sendMessage(chatid, (String)"Недостаточно данных для прогнозирования погоды. Подождите");
+      }
+      else{ 
+      if(!(aver - pressure_array[5]  > 2 || pressure_array[5] - aver  > 2)){
+      bot.sendMessage(chatid, (String)"Погода не изменится в ближайшее время");
+      }
+      }
+
+      
+      
+    }
+
+    if (text == "/atmPressure") {
 
       status = pressure.startTemperature();
       if (status != 0)
@@ -92,18 +122,19 @@ void handleNewMessages(int numNewMessages) {
       }
 
     if (text == "/options") {
-      String keyboardJson = "[[\"/temperatureInsideHouse\", \"/temperatureOutsideHouse\", \"/humidityInsideHouse\", \"/atmospherePressure\"]]";
+      String keyboardJson = "[[\"/temInHouse\", \"/temOutHouse\", \"/humInHouse\", \"/atmPressure\", \"/wForecast\"]]";
       bot.sendMessageWithReplyKeyboard(chat_id, "Что вы хотите узнать?", "", keyboardJson, true);
     }
 
     if (text == "/start" || text == "/help") {
       String welcome = "Привет, я домашняя метеостанция. Рада знакомству, " + from_name + ".\n";
       welcome += "Доступные функции:\n\n";
-      welcome += "/temperatureInsideHouse : Узнать температуру внутри дома в градусах цельсия\n";
-      welcome += "/temperatureOutsideHouse : Узнать температуру снаружи дома в градусах цельсия\n";
-      welcome += "/humidityInsideHouse : Узнать влажность внутри дома в процентах(%)\n";
-      welcome += "/atmospherePressure : Узнать атмосферное давление в мм.рт.ст\n";
-      welcome += "/options : returns a custom reply keyboard\n";
+      welcome += "/temInHouse : Узнать температуру внутри дома в градусах цельсия\n";
+      welcome += "/temOutHouse : Узнать температуру снаружи дома в градусах цельсия\n";
+      welcome += "/humInHouse : Узнать влажность внутри дома в процентах(%)\n";
+      welcome += "/atmPressure : Узнать атмосферное давление в мм.рт.ст\n";
+      welcome += "/wForecast : Получить прогноз погоды, основанный на перепадах атмосферного давления\n";
+      welcome += "/options : Показать кнопки для быстрого ввода команд\n";
       welcome += "/help : Показать это сообщение снова\n";
       bot.sendMessage(chat_id, welcome, "Markdown");
     }
@@ -136,7 +167,39 @@ void setup() {
   Serial.print("IP адрес: ");
   Serial.println(WiFi.localIP());
 
-  bot.sendMessage(chatid, "Бот стартовал", "");
+  
+
+  status = pressure.startTemperature();
+      if (status != 0)
+      {
+      delay(status);
+      status = pressure.getTemperature(T);
+      }
+
+      status = pressure.startPressure(3);
+      if (status != 0)
+      {
+      delay(status);
+      status = pressure.getPressure(P,T);
+      if (status != 0)
+      {
+       P = P*0.750064;
+      }
+      }
+       
+      for (byte i = 0; i < 6; i++) {  
+    pressure_array[i] = P;
+      }
+
+      count = 0;
+      for (byte i = 0; i < 5; i++) {   
+      count = count + pressure_array[i];
+      }
+
+
+    bot.sendMessage(chatid, "Бот стартовал", "");
+      
+      
 }
 
 void loop() {
@@ -157,8 +220,59 @@ void loop() {
   timeNotify =  millis();
   if (timeNotify - timeLast >= 300000)   //Проверка показаний с датчиков и, влзможно, отправка сообщения каждые 5 минут
   {
-    bot.sendMessage(chatid," +timeNotify+ ");
+      float h = dht.readHumidity();
+      if(h < 30){
+        bot.sendMessage(chatid, (String)"Влажность в доме слишком низкая (" + h + "%)");
+      }
+      if(h > 60){
+        bot.sendMessage(chatid, (String)"Влажность в доме слишком высокая (" + h + "%)");
+      }
+
+      float temperature = dht.readTemperature();
+      if(temperature >= 30){
+        bot.sendMessage(chatid, (String)"Дома сликом жарко (" + temperature + " C)");
+      }
+      if(temperature <= 18){
+        bot.sendMessage(chatid, (String)"Дома сликом холодно (" + temperature + " C)");
+      }
+      
+      timeLast = timeNotify;
+  }
+
+
+  timeNotify =  millis();
+  if (timeNotify - timeLast >= 10800000) // каждые 3 часа
+  {
+      status = pressure.startTemperature();
+      if (status != 0)
+      {
+      delay(status);
+      status = pressure.getTemperature(T);
+      }
+
+      status = pressure.startPressure(3);
+      if (status != 0)
+      {
+      delay(status);
+      status = pressure.getPressure(P,T);
+      if (status != 0)
+      {
+       P = P*0.750064;
+      }
+      }
+      
+      for (byte i = 0; i < 5; i++) {
+      pressure_array[i] = pressure_array[i + 1];     
+      }
+      pressure_array[5] = P; 
+
+      count = 0;
+      for (byte i = 0; i < 5; i++) {   
+      count = count + pressure_array[i];
+      }
+                    
       timeLast = timeNotify;
   }
    
 }
+
