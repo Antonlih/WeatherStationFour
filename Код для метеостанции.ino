@@ -33,10 +33,9 @@ int timeLast = 0;
 long ldrDueTime;
 int checkLDRDelay = 250;
 
-double pressure_array[6];
+double pressure_last;
+double pressure_now;
 
-double count;
-double aver;
 
 WiFiClientSecure client;
 UniversalTelegramBot bot(BOTtoken, client);
@@ -76,49 +75,29 @@ void handleNewMessages(int numNewMessages) {
     }
 
     if (text == "/wForecast") {
-      aver = count / 5;
-      if(pressure_array[5] - aver  > 2){
+     
+      if(pressure_now - pressure_last  > 2 && pressure_last != 0){
       bot.sendMessage(chatid, (String)"Погода будет хорошей и ясной. Без осадков");
       }
 
-      if(aver - pressure_array[5]  > 2){
+      if(pressure_last - pressure_now  > 2){
       bot.sendMessage(chatid, (String)"Ожидается ухудшение погоды");
       }
 
-      if( pressure_array[0] == pressure_array[1] &&  pressure_array[1] ==  pressure_array[2] &&  pressure_array[2] ==  pressure_array[3]
-      &&  pressure_array[3] ==  pressure_array[4]){
-      bot.sendMessage(chatid, (String)"Недостаточно данных для прогнозирования погоды. Подождите");
-      }
-      else{ 
-      if(!(aver - pressure_array[5]  > 2 || pressure_array[5] - aver  > 2)){
-      bot.sendMessage(chatid, (String)"Погода не изменится в ближайшее время");
-      }
+      if(pressure_last - pressure_now  <= 2 && pressure_now - pressure_last  <= 2){
+      bot.sendMessage(chatid, (String)"Погода не изменится");
       }
 
-      
+      if(pressure_last == 0){
+      bot.sendMessage(chatid, (String)"Недостаточно данных для прогнозирования погоды. Подождите");
+      }
       
     }
 
     if (text == "/atmPressure") {
-
-      status = pressure.startTemperature();
-      if (status != 0)
-      {
-      delay(status);
-      status = pressure.getTemperature(T);
-      }
-
-      status = pressure.startPressure(3);
-      if (status != 0)
-      {
-      delay(status);
-      status = pressure.getPressure(P,T);
-      if (status != 0)
-      {
-       P = P*0.750064;
+      P = GetPressure();
       bot.sendMessage(chatid, (String)"Атмосферное давление: " + P + " мм.рт.ст");
-      }
-      }
+      
       }
 
     if (text == "/options") {
@@ -169,32 +148,10 @@ void setup() {
 
   
 
-  status = pressure.startTemperature();
-      if (status != 0)
-      {
-      delay(status);
-      status = pressure.getTemperature(T);
-      }
-
-      status = pressure.startPressure(3);
-      if (status != 0)
-      {
-      delay(status);
-      status = pressure.getPressure(P,T);
-      if (status != 0)
-      {
-       P = P*0.750064;
-      }
-      }
-       
-      for (byte i = 0; i < 6; i++) {  
-    pressure_array[i] = P;
-      }
-
-      count = 0;
-      for (byte i = 0; i < 5; i++) {   
-      count = count + pressure_array[i];
-      }
+      
+      P = GetPressure();
+      pressure_now = P;
+      
 
 
     bot.sendMessage(chatid, "Бот стартовал", "");
@@ -241,9 +198,21 @@ void loop() {
 
 
   timeNotify =  millis();
-  if (timeNotify - timeLast >= 10800000) // каждые 3 часа
+  if (timeNotify - timeLast >= 10800000) // каждые 3 часа  10800000
   {
-      status = pressure.startTemperature();
+      P = GetPressure();
+      pressure_last = pressure_now;
+      pressure_now = P;
+
+      
+      timeLast = timeNotify;
+  }
+}
+
+
+double GetPressure() {
+
+  status = pressure.startTemperature();
       if (status != 0)
       {
       delay(status);
@@ -260,19 +229,8 @@ void loop() {
        P = P*0.750064;
       }
       }
-      
-      for (byte i = 0; i < 5; i++) {
-      pressure_array[i] = pressure_array[i + 1];     
-      }
-      pressure_array[5] = P; 
 
-      count = 0;
-      for (byte i = 0; i < 5; i++) {   
-      count = count + pressure_array[i];
-      }
-                    
-      timeLast = timeNotify;
-  }
-   
+      return P;
+  
 }
-
+   
