@@ -85,7 +85,7 @@ void handleNewMessages(int numNewMessages) {
       }
 
       if(pressure_last - pressure_now  <= 2 && pressure_now - pressure_last  <= 2){
-      bot.sendMessage(chatid, (String)"Погода не изменится");
+      bot.sendMessage(chatid, (String)"Погода не изменится в ближайшее время");
       }
 
       if(pressure_last == 0){
